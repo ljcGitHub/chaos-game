@@ -1,0 +1,82 @@
+/**
+ * Eric Meyer's Reset CSS v2.0 (http://meyerweb.com/eric/tools/css/reset/)
+ * http://cssreset.com
+ */
+html, body, div, span, applet, object, iframe, 
+h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, 
+acronym, address, big, cite, code, del, dfn, 
+em, img, ins, kbd, q, s, samp, small, strike, 
+strong, sub, sup, tt, var, b, u, i, button,
+center, dl, dt, dd, ol, ul, li, fieldset, 
+form, label, legend, table, caption, tbody, 
+tfoot, thead, tr, th, td, article, aside, canvas, 
+details, embed, figure, figcaption, footer, header, 
+menu, nav, output, ruby, section, summary, time, mark, 
+audio, video, input, textarea {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font-style: normal;
+  font-weight: normal;
+  vertical-align: baseline;
+  box-sizing: border-box;
+  font-family: Microsoft Yahei,'PingFang SC',sans-serif;;
+  -webkit-tap-highlight-color: transparent;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+a {
+  color: inherit;
+  -webkit-backface-visibility: hidden;
+  text-decoration: none;
+}
+
+li {
+  list-style: none;
+}
+
+body, html{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+  line-height: 1;
+  user-select: text;
+  color: #333;
+}
+
+input, button {
+  outline: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;;
+  border: 0;
+  text-rendering: auto;
+  resize: none;
+  &::-webkit-input-placeholder {
+    font-family: Microsoft Yahei,'PingFang SC',sans-serif;;
+  }
+
+  &::placeholder {
+    font-family: Microsoft Yahei,'PingFang SC',sans-serif;;
+  }
+}
+
+input[type=search] {
+  -webkit-appearance: textfield;
+  -webkit-box-sizing: content-box;
+  font-family: inherit;
+}
+input::-webkit-search-decoration,
+input::-webkit-search-cancel-button {
+  display: none;
+}
+
+*{
+  -webkit-overflow-scrolling: touch
+}
+  
