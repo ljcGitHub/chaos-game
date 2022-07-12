@@ -1,11 +1,14 @@
 import THREE from '../_libs/three.js'
+import { OrbitControls } from '../_libs/orbitControls.js'
 import { fps, raf } from '../common/utils.js'
 import Event from './event.js'
-import { transformMixins } from './mixins.js'
+import { World } from './physical/index.js'
+import { transformMixins, physicalMixins } from './mixins.js'
+import { copy } from './physical/utils/math.js'
+import { mock } from './mock.js'
 
 class Game {
   constructor(handle) {
-    this.pools = {} // 对象池
     this.selectUid = '' // 选中对象
     this.fps = fps // 帧数频率
     this.logicFpsStep = 3 // 逻辑帧数
@@ -17,42 +20,43 @@ class Game {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: window.canvas })
     this.handle = handle
     this.pubsub = new Event(this)
+    this.physicalWorld = new World(this.scene)
     this.init()
-  }
-
-  addPool(obj3d, info) {
-    obj3d.userData._isChaos = true
-    this.pools[obj3d.uuid] = info
-  }
-  getPool(obj3d, info) {
-    if (obj3d.userData._isChaos) return this.pools[obj3d.uuid]
-    return null
-  }
-  removePool(obj3d) {
-    delete this.pools[obj3d.uuid]
   }
 
   // 主循环
   loop() {
-    if (this.working) {
-      this.step += 1
-      if (this.step % this.logicFpsStep === 0) {
-        this.logicRender()
-      }
-      this.updateRender()
-    } else {
-      this.staticRender()
+    this.step += 1
+    if (this.step % this.logicFpsStep === 0) {
+      this.logicRender()
     }
+    this.updateRender()
     raf(() => this.loop())
   }
 
   logicRender() {
+    this.physicalWorld.step()
   }
   updateRender() {
+    this.physicalWorld.physicsRender()
+    this.scene.children.forEach(obj => this.objectUpdate(obj))
     this.renderer.clear()
     this.renderer.render(this.scene, this.camera)
   }
-  staticRender() {
+  objectUpdate(obj) {
+    if (obj.userData.transform) {
+      const transform = obj.userData.transform
+      const physical = obj.userData.physical
+      copy(obj.position, transform.position)
+      copy(obj.rotation, transform.rotation)
+      if (physical) {
+        copy(physical.position, transform.position)
+        copy(physical.rotation, transform.rotation)
+      }
+    }
+    if (obj.children && obj.children.length) {
+      obj.children.forEach(obj => this.objectUpdate(obj))
+    }
   }
 
   // 获取循环对象
@@ -77,12 +81,17 @@ class Game {
   }
 
   selectObject(obj) {
+    const lastSelectUid = this.selectUid
     this.selectUid = obj.uuid
+    if (!this.getSelectObject()) {
+      this.selectUid = lastSelectUid
+    }
   }
   getSelectObject(child) {
     const children = child || this.scene.children
     for (let i = 0; i < children.length; i++) {
       const item = children[i]
+      if (!item.userData.transform) continue
       if (this.selectUid === item.uuid) return item
       if (item.children.length) return this.getSelectObject(item.children)
     }
@@ -96,27 +105,21 @@ class Game {
     this.renderer.autoClear = false
     this.camera.position.set(200, 200, 200)
     this.camera.lookAt(new THREE.Vector3(0, 0, 0))
-    this.demo()
+    this.parse(mock)
   }
-  demo() {
-    const geometry = new THREE.BoxGeometry(40, 40, 40)
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
-    const cube = new THREE.Mesh(geometry, material)
-    transformMixins(cube)
-    this.scene.add(cube)
-    this.pubsub.on(cube, 'touchstart', () => {
+  parse(objs, parent) {
+    objs.forEach(item => {
+      const obj = new THREE.Object3D()
+      if (item.transform) transformMixins(obj, item.transform)
+      if (item.physical) {
+        physicalMixins(obj, item.physical)
+        this.physicalWorld.addBody(obj.userData.physical)
+      }
+      if (item.children && item.children.length) {
+        this.parse(item.children, obj)
+      }
+      parent ? parent.add(obj) : this.scene.add(obj)
     })
-    cube.position.x = -40
-    const cube2 = new THREE.Mesh(geometry, material)
-    transformMixins(cube2)
-    this.scene.add(cube2)
-    this.pubsub.on(cube2, 'touchstart', () => {
-    })
-    cube2.position.x = 40
-    setInterval(() => {
-      cube.rotation.x += 0.01
-      cube.rotation.y += 0.01
-    }, 1000 / 60)
   }
   start() {
     this.working = true
@@ -124,6 +127,28 @@ class Game {
   }
   stop() {
     this.working = false
+  }
+
+  showHelp() {
+    if (!this.controls) {
+      this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+    }
+    this.controls.enabled = true
+
+    if (!this.axesHelper) {
+      this.axesHelper = new THREE.AxesHelper(500)
+      this.scene.add(this.axesHelper)
+    }
+  }
+
+  hideHelp() {
+    if (this.controls) {
+      this.controls.enabled = false
+    }
+    if (this.axesHelper) {
+      this.scene.remove(this.axesHelper)
+      this.axesHelper = null
+    }
   }
 }
 

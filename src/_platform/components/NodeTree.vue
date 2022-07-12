@@ -1,10 +1,7 @@
 <template>
   <div class="NodeTree">
     <div class="NodeTree-tabs">
-      <Tabs
-        :data="tabs"
-        v-model="tabsValue"
-      ></Tabs>
+      <Tabs :data="tabs" v-model="tabsValue"></Tabs>
     </div>
     <div class="NodeTree-content">
       <div class="NodeTree-header">
@@ -12,12 +9,34 @@
           <i slot="prefix" class="el-input__icon el-icon-search"></i>
         </el-input>
       </div>
-      <el-tree
-        class="NodeTreeContent"
-        :data="data"
-        :props="defaultProps"
-        @node-click="handleNodeClick"
-      ></el-tree>
+      <div class="NodeTreeContent">
+        <div v-for="item in data" :key="item.label" class="NodeTreeItem">
+          <div
+            :class="{
+              active: item.uuid == selectUid,
+            }"
+            class="NodeTreeLabel"
+            @click="selectItem(item)"
+          >
+            {{ item.label }}
+          </div>
+          <div
+            v-for="child in item.children"
+            :key="child.label"
+            class="NodeTreeItem"
+            @click="selectItem(child)"
+          >
+            <div
+              class="NodeTreeLabel"
+              :class="{
+                active: child.uuid == selectUid,
+              }"
+            >
+              {{ item.label }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -30,45 +49,6 @@ export default {
   data() {
     return {
       search: '',
-      data: [{
-        label: '一级 1',
-        children: [{
-          label: '二级 1-1',
-          children: [{
-            label: '三级 1-1-1'
-          }]
-        }]
-      }, {
-        label: '一级 2',
-        children: [{
-          label: '二级 2-1',
-          children: [{
-            label: '三级 2-1-1'
-          }]
-        }, {
-          label: '二级 2-2',
-          children: [{
-            label: '三级 2-2-1'
-          }]
-        }]
-      }, {
-        label: '一级 3',
-        children: [{
-          label: '二级 3-1',
-          children: [{
-            label: '三级 3-1-1'
-          }]
-        }, {
-          label: '二级 3-2',
-          children: [{
-            label: '三级 3-2-1'
-          }]
-        }]
-      }],
-      defaultProps: {
-        children: 'children',
-        label: 'label'
-      },
       tabs: [{
         label: 'Project',
         value: 'Project'
@@ -79,11 +59,45 @@ export default {
       tabsValue: 'Project'
     }
   },
-  computed: {},
-  created() { },
+  computed: {
+    selectUid() {
+      return this.$state.selectUid
+    },
+    data() {
+      if (this.tabsValue === 'Project') return []
+      return this.getNodes(this.$game.scene.children)
+    }
+  },
   methods: {
-    handleNodeClick(data) {
-      console.log(data)
+    getNodes(arr = [], out = []) {
+      for (let i = 0; i < arr.length; i++) {
+        const item = arr[i]
+        const children = []
+        const label = this.getObjectName(item)
+        if (item.userData.hide) continue
+        if (!label) continue
+        out.push({
+          label,
+          uuid: item.uuid,
+          children
+        })
+        if (item.children.length) {
+          this.getNodes(item.children, children)
+        }
+      }
+      return out
+    },
+    getObjectName(obj) {
+      if (obj.userData.tag) return obj.userData.tag
+      if (obj.isScene) return `Scene(${obj.id})`
+      if (obj.isCamera) return `Camera(${obj.id})`
+      if (obj.isMesh) return `Mesh(${obj.id})`
+      if (obj.isLine) return false
+      return `Object3D(${obj.id})`
+    },
+    selectItem(data) {
+      this.$game.selectUid = data.uuid
+      this.$state.selectUid = data.uuid
     }
   },
   components: {
@@ -133,15 +147,24 @@ export default {
 }
 
 .NodeTreeContent {
-  background-color: #2e2e2e !important;
-  color: #fff !important;
+  background-color: #2e2e2e;
+  color: #fff;
 
-  .el-tree-node, .el-tree-node__content {
-    background-color: #2e2e2e !important;
+  .NodeTreeItem {
+    padding: 5px 10px;
+
+    & > .NodeTreeItem {
+      margin-left: 10px;
+      padding: 5px 10px;
+    }
   }
 
-  .el-tree-node__content:hover, .el-upload-list__item:hover {
-    background-color: #434343 !important;
+  .NodeTreeLabel {
+    font-size: 12px;
+
+    &.active {
+      color: #ff3300;
+    }
   }
 }
 </style>

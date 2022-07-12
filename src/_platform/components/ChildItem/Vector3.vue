@@ -1,11 +1,19 @@
 <template>
   <div class="Vector">
-    <h4 class="Vector-title">{{ title }}</h4>
+    <h4 class="Vector-title" v-if="title">{{ title }}</h4>
     <div class="Vector-content">
-      <div class="Vector-item" v-for="item in data" :key="item">
-        <span class="Vector-label">{{ toLocaleUpperCase(item) }}</span>
-        <el-input @keydown.native="e => keydown(e, item)" v-model="form[item]" size="mini"></el-input>
-      </div>
+      <template v-if="isString">
+        <div class="Vector-item">
+          <span class="Vector-label" style="min-width:45px;">{{ subtitle }}</span>
+          <el-input @keydown.native="e => keydown(e, data)" @input="change(data, form[data])" v-model="form[data]" size="mini"></el-input>
+        </div>
+      </template>
+      <template v-else>
+        <div class="Vector-item" v-for="item in data" :key="item">
+          <span class="Vector-label">{{ toLocaleUpperCase(item) }}</span>
+          <el-input @keydown.native="e => keydown(e, item)" @input="change(item, form[item])" v-model="form[item]" size="mini"></el-input>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -20,12 +28,21 @@ export default {
       type: String,
       default: ''
     },
+    subtitle: {
+      type: String,
+      default: ''
+    },
     form: {
       type: Object
     },
     data: {
-      type: Array,
+      type: [Array, String],
       default: () => []
+    }
+  },
+  computed: {
+    isString() {
+      return this.data.constructor === String
     }
   },
   methods: {
@@ -34,6 +51,7 @@ export default {
     },
     keydown(e, item) {
       const num = e.altKey ? 0.1 : 1
+      e.stopPropagation()
       if (e.key === 'ArrowUp') {
         e.preventDefault()
         this.form[item] = add(this.form[item], num)
@@ -43,6 +61,7 @@ export default {
       }
     },
     change(item, val) {
+      this.form[item] = Number(this.form[item])
       this.$emit('change', item, val)
     }
   }
@@ -80,6 +99,8 @@ export default {
     font-size: 12px;
     font-weight: bold;
     color: #969696;
+    flex-shrink: 0;
+    text-align: right;
   }
 
   .el-input__inner {

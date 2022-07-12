@@ -78,6 +78,11 @@ import Icon from './Icon.vue'
 
 export default {
   name: 'Perspective',
+  computed: {
+    perspectiveTabsValue() {
+      return this.$state.perspectiveTabsValue
+    }
+  },
   methods: {
     deviceChange(e) {
       const item = this.$const.devicesArrs.find(_item => _item.label === e)
@@ -90,6 +95,18 @@ export default {
   components: {
     Tabs,
     Icon
+  },
+  watch: {
+    perspectiveTabsValue: {
+      handler() {
+        if (this.perspectiveTabsValue === 'game') {
+          this.$game.showHelp()
+        } else {
+          this.$game.hideHelp()
+        }
+      },
+      immediate: true
+    }
   }
 }
 
