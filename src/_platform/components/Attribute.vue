@@ -1,16 +1,34 @@
 <template>
   <div class="Attribute" v-if="selectUid">
     <div class="Attribute-item">
+      <div class="Attribute-item-header">基础信息</div>
+      <Vector3
+        :form="target"
+        subtitle="标签"
+        data="tag"
+        @change="tagChange"
+      ></Vector3>
+    </div>
+
+    <div class="Attribute-item">
       <div class="Attribute-item-header">Transform(变换)</div>
       <template v-if="target.transform">
         <Vector3
           title="Position"
-          :form="target.transform.position"
+          :form="
+            target.physical
+              ? target.physical.position
+              : target.transform.position
+          "
           :data="position"
         ></Vector3>
         <Vector3
           title="Rotation"
-          :form="target.transform.rotation"
+          :form="
+            target.physical
+              ? target.physical.rotation
+              : target.transform.rotation
+          "
           :data="position"
         ></Vector3>
       </template>
@@ -18,7 +36,11 @@
 
     <div class="Attribute-item">
       <div class="Attribute-item-header">Physical(刚体)</div>
-      <template v-if="target.physical">
+      <div v-if="target.physical">
+        <div class="AttributeItem">
+          <span class="AttributeLabel">触发</span>
+          <el-checkbox v-model="target.physical.isTrigger"></el-checkbox>
+        </div>
         <Vector3 :form="target.physical" subtitle="质量" data="mass"></Vector3>
         <Vector3
           :form="target.physical"
@@ -82,11 +104,112 @@
           </div>
         </template>
         <div class="AttributeButton">
-          <el-button style="width: 100%" @click="addPhysicalComp" type="success">新增碰撞体</el-button>
+          <el-button style="width: 100%" @click="addPhysicalComp" type="success"
+            >新增碰撞体</el-button
+          >
         </div>
-      </template>
+        <div class="AttributeButton">
+          <el-button style="width: 100%" @click="removePhysical" type="danger"
+            >删除物理</el-button
+          >
+        </div>
+      </div>
       <div class="AttributeButton" v-else>
-        <el-button style="width: 100%" @click="addPhysical" type="primary">新增物理</el-button>
+        <el-button style="width: 100%" @click="addPhysical" type="primary"
+          >新增物理</el-button
+        >
+      </div>
+    </div>
+
+    <div class="Attribute-item">
+      <div class="Attribute-item-header">
+        <span>脚本</span>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">初始化</span>
+        <Func
+          :form="target"
+          functionPaths="startId"
+          functionCallBackName="start"
+        ></Func>
+      </div>
+
+      <div class="AttributeItem" style="margin-top: 20px">
+        <span class="AttributeLabel">鼠标按下</span>
+        <Func
+          :form="target"
+          functionPaths="touchstartId"
+          functionCallBackName="touchstart"
+          @change="eventChange"
+        ></Func>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">鼠标移动</span>
+        <Func
+          :form="target"
+          functionPaths="touchmoveId"
+          functionCallBackName="touchmove"
+          @change="eventChange"
+        ></Func>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">鼠标松开</span>
+        <Func
+          :form="target"
+          functionPaths="touchendId"
+          functionCallBackName="touchend"
+          @change="eventChange"
+        ></Func>
+      </div>
+
+      <div class="AttributeItem" style="margin-top: 20px">
+        <span class="AttributeLabel">碰撞开始</span>
+        <Func
+          :form="target"
+          functionPaths="collisionEnterId"
+          functionCallBackName="collisionEnter"
+        ></Func>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">碰撞中</span>
+        <Func
+          :form="target"
+          functionPaths="collisionActiveId"
+          functionCallBackName="collisionActive"
+        ></Func>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">碰撞结束</span>
+        <Func
+          :form="target"
+          functionPaths="collisionExitId"
+          functionCallBackName="collisionExit"
+        ></Func>
+      </div>
+
+      <div class="AttributeItem" style="margin-top: 20px">
+        <span class="AttributeLabel">触发开始</span>
+        <Func
+          :form="target"
+          functionPaths="triggerEnterId"
+          functionCallBackName="triggerEnter"
+        ></Func>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">触发中</span>
+        <Func
+          :form="target"
+          functionPaths="triggerActiveId"
+          functionCallBackName="triggerActive"
+        ></Func>
+      </div>
+      <div class="AttributeItem">
+        <span class="AttributeLabel">触发结束</span>
+        <Func
+          :form="target"
+          functionPaths="triggerExitId"
+          functionCallBackName="triggerExit"
+        ></Func>
       </div>
     </div>
   </div>
@@ -94,6 +217,7 @@
 
 <script>
 import Vector3 from './ChildItem/Vector3'
+import Func from './ChildItem/Func'
 import { physicalMixins, physicalShapeMixins } from '@/core/mixins'
 
 export default {
@@ -115,6 +239,11 @@ export default {
       physicalMixins(item)
       this.$game.physicalWorld.addBody(item.userData.physical)
       this.$set(this.target, 'physical', item.userData.physical)
+    },
+    removePhysical() {
+      const item = this.$game.getSelectObject()
+      this.$game.physicalWorld.removeBody(item.userData.physical)
+      item.userData.physical = null
     },
     compChange(index) {
       const item = this.target.physical.comp[index]
@@ -148,24 +277,40 @@ export default {
     },
     halfSizeChange(comp) {
       comp.updateMesh()
+    },
+    tagChange(item, v) {
+      this.$set(this.target, 'tag', v)
+    },
+    getTarget() {
+      const item = this.$game.getSelectObject()
+      if (item) {
+        this.target = item.userData
+        this.$set(this.target, 'tag', item.userData.tag)
+        this.$set(this.target, 'transform', item.userData.transform)
+        if (item.userData.physical) {
+          this.$set(this.target, 'physical', item.userData.physical)
+        }
+      } else {
+        this.target = {}
+      }
+    },
+    eventChange() {
+      const item = this.$game.getSelectObject()
+      if (this.target.touchstart || this.target.touchmove || this.target.touchend) {
+        this.$game.pubsub.on(item)
+      } else {
+        this.$game.pubsub.off(item)
+      }
     }
   },
   watch: {
     selectUid() {
-      const item = this.$game.getSelectObject()
-      this.target = {}
-      if (item) {
-        this.$set(this.target, 'transform', item.userData.transform)
-        if (item.userData.physical) {
-          this.$set(this.target, 'physical', item.userData.physical)
-        } else {
-          this.target.physical = null
-        }
-      }
+      this.getTarget()
     }
   },
   components: {
-    Vector3
+    Vector3,
+    Func
   }
 }
 
@@ -185,6 +330,7 @@ export default {
 }
 
 .Attribute-item-header {
+  position: relative;
   margin-bottom: 10px;
   padding: 12px 10px;
   color: #969696;
@@ -232,5 +378,28 @@ export default {
   right: 0;
   font-size: 14px;
   color: #fff;
+}
+
+.AttributeItem {
+  .el-input__inner {
+    background-color: #383838;
+    color: #969696;
+    border-color: #222;
+    height: 24px !important;
+    line-height: 24px !important;
+  }
+}
+
+.AttributeAddScript {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  padding: 10px;
+  transform: translateY(-50%);
+
+  &:hover {
+    cursor: pointer;
+    color: #67C23A;
+  }
 }
 </style>

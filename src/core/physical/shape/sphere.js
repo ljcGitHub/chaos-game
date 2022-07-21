@@ -18,6 +18,6 @@ export default class Sphere extends Shape {
   }
 
   createMesh() {
-    return new THREE.Mesh(new THREE.SphereGeometry(this.radius, 32, 16), baseMaterial)
+    return new THREE.Mesh(new THREE.SphereGeometry(this.radius * 2, 32, 16), baseMaterial)
   }
 }

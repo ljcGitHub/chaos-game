@@ -74,7 +74,7 @@
 
 <script>
 import Tabs from './ChildItem/Tabs'
-import Icon from './Icon.vue'
+import Icon from './ChildItem/Icon.vue'
 
 export default {
   name: 'Perspective',

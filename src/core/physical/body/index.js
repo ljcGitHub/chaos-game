@@ -1,10 +1,12 @@
-import { Vector3, toVector3, Euler, toEuler, extractBasis } from '../utils/math.js'
+import { Vector3, toVector3, Euler, toEuler, extractBasis, add } from '../utils/math.js'
 
 export default class Body {
   constructor(options) {
     this.comp = []
     this.position = options.position ? toVector3(options.position) : new Vector3()
     this.rotation = options.rotation ? toEuler(options.rotation) : new Euler()
+    this.offsetPosition = new Vector3()
+    this.offsetRotation = new Euler()
     this.mass = options.mass || 0 // 质量
     if (this.mass === 0) {
       this.inverseMass = 0 // 逆质量
@@ -21,7 +23,9 @@ export default class Body {
     this.velocity = new Vector3(0, 0, 0) // 速度
     this.acceleration = new Vector3(0, 0, 0) // 加速度
     this.show = false
-    this._parentNode = null
+    this.isTrigger = options.isTrigger || false
+    this.object3d = options.object3d
+    this.uuid = options.object3d.uuid
   }
   reposition() {
     this.velocity = this.velocity.add(this.acceleration).multiplyScalar(1 - this.friction)
@@ -29,12 +33,14 @@ export default class Body {
       this.velocity = this.velocity.normalize().multiply(this.maxSpeed)
     }
     this.position.add(this.velocity)
+    const pos = add(this.position, this.offsetPosition)
+    const rot = add(this.rotation, this.offsetRotation)
     this.comp.forEach(comp => {
-      comp.center = comp.center.copy(this.position).add(comp.offsetPosition)
+      comp.center = comp.center.copy(pos).add(comp.offsetPosition)
       comp.rotation = comp.rotation.set(
-        this.rotation.x + comp.offsetRotation.x,
-        this.rotation.y + comp.offsetRotation.y,
-        this.rotation.z + comp.offsetRotation.z
+        rot.x + comp.offsetRotation.x,
+        rot.y + comp.offsetRotation.y,
+        rot.z + comp.offsetRotation.z
       )
       comp.unitAxis = extractBasis(comp)
     })
@@ -48,19 +54,11 @@ export default class Body {
     if (this.debug) {
       this.comp.forEach(com => {
         if (com.mesh) {
-          com.mesh.position.copy(com.center)
-          com.mesh.rotation.copy(com.rotation)
+          com.mesh.position.copy(com.offsetPosition)
+          com.mesh.rotation.copy(com.offsetRotation)
         }
       })
     }
-  }
-
-  get parentNode() {
-    return this._parentNode
-  }
-  set parentNode(parentNode) {
-    this._parentNode = parentNode
-    this.debugMesh(this.debug)
   }
 
   get debug() {
@@ -73,14 +71,13 @@ export default class Body {
 
   debugMesh(v) {
     if (!this.parentNode) return false
-    const scene = this.parentNode.scene
     if (v) {
       this.comp.forEach(comp => {
-        comp.showMesh(scene)
+        comp.showMesh(this.object3d)
       })
     } else {
       this.comp.forEach(comp => {
-        comp.hideMesh(scene)
+        comp.hideMesh(this.object3d)
       })
     }
   }

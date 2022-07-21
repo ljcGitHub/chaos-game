@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import * as Svg from '../common/svg'
+import * as Svg from '../../common/svg'
 const svgRoot = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 svgRoot.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
 svgRoot.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')

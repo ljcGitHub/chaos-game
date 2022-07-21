@@ -10,32 +10,7 @@
         </el-input>
       </div>
       <div class="NodeTreeContent">
-        <div v-for="item in data" :key="item.label" class="NodeTreeItem">
-          <div
-            :class="{
-              active: item.uuid == selectUid,
-            }"
-            class="NodeTreeLabel"
-            @click="selectItem(item)"
-          >
-            {{ item.label }}
-          </div>
-          <div
-            v-for="child in item.children"
-            :key="child.label"
-            class="NodeTreeItem"
-            @click="selectItem(child)"
-          >
-            <div
-              class="NodeTreeLabel"
-              :class="{
-                active: child.uuid == selectUid,
-              }"
-            >
-              {{ item.label }}
-            </div>
-          </div>
-        </div>
+        <Node :data="data"></Node>
       </div>
     </div>
   </div>
@@ -43,6 +18,7 @@
 
 <script>
 import Tabs from './ChildItem/Tabs'
+import Node from './ChildItem/Node'
 
 export default {
   name: 'NodeTree',
@@ -60,9 +36,6 @@ export default {
     }
   },
   computed: {
-    selectUid() {
-      return this.$state.selectUid
-    },
     data() {
       if (this.tabsValue === 'Project') return []
       return this.getNodes(this.$game.scene.children)
@@ -74,7 +47,7 @@ export default {
         const item = arr[i]
         const children = []
         const label = this.getObjectName(item)
-        if (item.userData.hide) continue
+        if (!item.userData.isCustom) continue
         if (!label) continue
         out.push({
           label,
@@ -94,14 +67,11 @@ export default {
       if (obj.isMesh) return `Mesh(${obj.id})`
       if (obj.isLine) return false
       return `Object3D(${obj.id})`
-    },
-    selectItem(data) {
-      this.$game.selectUid = data.uuid
-      this.$state.selectUid = data.uuid
     }
   },
   components: {
-    Tabs
+    Tabs,
+    Node
   }
 }
 
@@ -149,22 +119,5 @@ export default {
 .NodeTreeContent {
   background-color: #2e2e2e;
   color: #fff;
-
-  .NodeTreeItem {
-    padding: 5px 10px;
-
-    & > .NodeTreeItem {
-      margin-left: 10px;
-      padding: 5px 10px;
-    }
-  }
-
-  .NodeTreeLabel {
-    font-size: 12px;
-
-    &.active {
-      color: #ff3300;
-    }
-  }
 }
 </style>

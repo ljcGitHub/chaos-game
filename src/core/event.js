@@ -82,7 +82,9 @@ export default class Event {
   }
 
   on(obj) {
-    this._events.push(obj)
+    if (this._events.indexOf(obj) === -1) {
+      this._events.push(obj)
+    }
   }
 
   off(obj) {

@@ -1,6 +1,4 @@
-import THREE from '../../../_libs/three.js'
 import { Vector3, Euler } from '../utils/math.js'
-import { baseMaterial } from '../utils/common.js'
 
 export default class Shape {
   constructor() {
@@ -10,10 +8,6 @@ export default class Shape {
     this.center = new Vector3()
     this.halfSize = new Vector3()
     this.rotation = new Euler()
-  }
-
-  createMesh(size) {
-    return new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), baseMaterial)
   }
 
   showMesh(scene) {

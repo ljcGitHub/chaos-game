@@ -1,6 +1,7 @@
 import THREE from '../_libs/three.js'
 import { cloneDeep } from '../common/utils'
 import { Body, Box, Sphere } from './physical/index.js'
+import { copy } from './physical/utils/math.js'
 
 // userData 混入自定义数据
 // 位置
@@ -28,13 +29,17 @@ export function physicalMixins(obj, data = {}) {
     })
   }
   obj.userData.physical = new Body({
+    object3d: obj,
     mass: data.mass,
     inertia: data.inertia,
     elasticity: data.elasticity,
     friction: data.friction,
     maxSpeed: data.maxSpeed,
-    layer: data.layer
+    layer: data.layer,
+    isTrigger: data.isTrigger
   })
+  copy(obj.userData.physical.position, obj.userData.transform.position)
+  copy(obj.userData.physical.rotation, obj.userData.transform.rotation)
   comps.forEach(comp => {
     obj.userData.physical.addShape(comp)
   })
@@ -48,6 +53,7 @@ export function physicalStringify(obj) {
     friction: data.friction,
     maxSpeed: data.maxSpeed,
     layer: data.layer,
+    isTrigger: data.isTrigger,
     comp: data.comp.map(comp => {
       return {
         halfSize: comp.halfSize,
@@ -75,4 +81,15 @@ export function physicalShapeMixins(comp) {
       offsetRotation: comp.offsetRotation
     })
   }
+}
+
+// 脚本注入
+export function functionMixins(val, options) {
+  const paths = val.split('.')
+  if (paths.length < 2) return null
+  let target = options
+  paths.forEach(key => {
+    target = target[key]
+  })
+  return target
 }

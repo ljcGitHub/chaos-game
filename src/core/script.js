@@ -33,4 +33,4 @@ export const getAssetsPath = function (rq) {
   return objs
 }
 
-export const script = getAssetsPath(require.context('../script/', true, /\.js$/))
+export const getScript = () => getAssetsPath(require.context('../script/', true, /\.js$/))

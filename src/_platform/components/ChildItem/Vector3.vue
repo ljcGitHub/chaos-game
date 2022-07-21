@@ -59,6 +59,7 @@ export default {
         e.preventDefault()
         this.form[item] = sub(this.form[item], num)
       }
+      this.$emit('change', item, this.form[item])
     },
     change(item, val) {
       this.form[item] = Number(this.form[item])

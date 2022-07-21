@@ -3,12 +3,13 @@ import { OrbitControls } from '../_libs/orbitControls.js'
 import { fps, raf } from '../common/utils.js'
 import Event from './event.js'
 import { World } from './physical/index.js'
-import { transformMixins, physicalMixins } from './mixins.js'
-import { copy } from './physical/utils/math.js'
+import { transformMixins, physicalMixins, functionMixins } from './mixins.js'
+import { copy, add, sub } from './physical/utils/math.js'
+import { getScript } from './script.js'
 import { mock } from './mock.js'
 
 class Game {
-  constructor(handle) {
+  constructor() {
     this.selectUid = '' // 选中对象
     this.fps = fps // 帧数频率
     this.logicFpsStep = 3 // 逻辑帧数
@@ -18,9 +19,10 @@ class Game {
     this.scene = new THREE.Scene()
     this.camera = new THREE.PerspectiveCamera(45, this.w / this.h, 1, 2000)
     this.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: window.canvas })
-    this.handle = handle
     this.pubsub = new Event(this)
     this.physicalWorld = new World(this.scene)
+    this.handle = getScript()
+    this.handleOptions = this.getScriptForEach(this.handle)
     this.init()
   }
 
@@ -39,20 +41,34 @@ class Game {
   }
   updateRender() {
     this.physicalWorld.physicsRender()
-    this.scene.children.forEach(obj => this.objectUpdate(obj))
     this.renderer.clear()
     this.renderer.render(this.scene, this.camera)
+    this.scene.children.forEach(obj => this.objectUpdate(obj))
   }
   objectUpdate(obj) {
     if (obj.userData.transform) {
       const transform = obj.userData.transform
       const physical = obj.userData.physical
+      if (obj.parent && obj.parent !== this.scene) {
+        const parentTransform = obj.parent.userData.transform
+        transform.worldPosition = add(parentTransform.worldPosition, transform.position)
+        transform.worldRotation = add(parentTransform.worldRotation, transform.rotation)
+      } else {
+        transform.worldPosition = transform.position
+        transform.worldRotation = transform.rotation
+      }
+      if (physical) {
+        let pos = sub(transform.worldPosition, transform.position)
+        let rot = sub(transform.worldRotation, transform.rotation)
+        copy(physical.offsetPosition, pos)
+        copy(physical.offsetRotation, rot)
+        pos.add(physical.position)
+        rot.add(physical.rotation)
+        copy(transform.position, physical.position)
+        copy(transform.rotation, physical.rotation)
+      }
       copy(obj.position, transform.position)
       copy(obj.rotation, transform.rotation)
-      if (physical) {
-        copy(physical.position, transform.position)
-        copy(physical.rotation, transform.rotation)
-      }
     }
     if (obj.children && obj.children.length) {
       obj.children.forEach(obj => this.objectUpdate(obj))
@@ -93,13 +109,16 @@ class Game {
       const item = children[i]
       if (!item.userData.transform) continue
       if (this.selectUid === item.uuid) return item
-      if (item.children.length) return this.getSelectObject(item.children)
+      if (item.children.length) {
+        const ft = this.getSelectObject(item.children)
+        if (ft) return ft
+      }
     }
     return null
   }
 
   init() {
-    this.scene.background = new THREE.Color(0x5896f7)
+    // this.scene.background = new THREE.Color(0x5896f7)
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(this.w, this.h)
     this.renderer.autoClear = false
@@ -110,10 +129,21 @@ class Game {
   parse(objs, parent) {
     objs.forEach(item => {
       const obj = new THREE.Object3D()
+      obj.userData.tag = item.tag || ''
+      obj.userData.isCustom = true
+      // 加载位置
       if (item.transform) transformMixins(obj, item.transform)
+      // 加载刚体
       if (item.physical) {
         physicalMixins(obj, item.physical)
         this.physicalWorld.addBody(obj.userData.physical)
+      } else {
+        obj.userData.physical = null
+      }
+      // 加载脚本
+      if (item.initId) {
+        obj.userData.initId = item.initId
+        item.init = functionMixins(item.initId, this.handle)
       }
       if (item.children && item.children.length) {
         this.parse(item.children, obj)
@@ -149,6 +179,21 @@ class Game {
       this.scene.remove(this.axesHelper)
       this.axesHelper = null
     }
+  }
+
+  getScriptForEach(script, parentStr = '', arr = []) {
+    for (const x in script) {
+      let prix = parentStr ? `${parentStr}.${x}` : x
+      if (typeof script[x] === 'function') {
+        arr.push({
+          label: prix,
+          value: prix
+        })
+      } else if (script[x] && typeof script[x] === 'object') {
+        this.getScriptForEach(script[x], prix, arr)
+      }
+    }
+    return arr
   }
 }
 
